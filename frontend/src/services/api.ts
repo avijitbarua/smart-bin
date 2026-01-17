@@ -101,10 +101,11 @@ export async function getUserHistory(userId: number, limit: number = 10) {
     status: string
     history: Array<{
       log_id: number
+      user_id: number
       waste_type: string
       waste_count: number
       points_earned: number
-      image_path: string | null
+      image_url?: string
       timestamp: string
     }>
   }>(`/api/user/${userId}/history?limit=${limit}`)
@@ -155,6 +156,22 @@ export async function resetBin(binId: number) {
     method: 'POST',
     body: JSON.stringify({ bin_id: binId }),
   })
+}
+
+export async function getAdminRecentLogs(limit: number = 20) {
+  return fetchApi<{
+    status: string
+    logs: Array<{
+      log_id: number
+      user_id: number
+      user_name: string
+      waste_type: string
+      waste_count: number
+      points_earned: number
+      image_url?: string
+      timestamp: string
+    }>
+  }>(`/api/admin/recent-logs?limit=${limit}`)
 }
 
 // ═════════════════════════════════════════════════════════════════

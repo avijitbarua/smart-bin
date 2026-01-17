@@ -7,6 +7,7 @@ import { History } from './pages/History'
 import { Leaderboard } from './pages/Leaderboard'
 import { Login } from './pages/Login'
 import { StudentDashboard } from './pages/StudentDashboard'
+import { UserHistory } from './pages/UserHistory'
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAdmin } = useData()
@@ -69,6 +70,16 @@ function App() {
           <ProtectedRoute adminOnly>
             <DashboardLayout>
               <AdminDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/user/:userId/history"
+        element={
+          <ProtectedRoute adminOnly>
+            <DashboardLayout>
+              <UserHistory />
             </DashboardLayout>
           </ProtectedRoute>
         }

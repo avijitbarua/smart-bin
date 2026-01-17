@@ -174,7 +174,7 @@ def insert_waste_log(db: DatabaseHelper, user_id: int, bin_id: int, waste_type: 
 def get_user_history(db: DatabaseHelper, user_id: int, limit: int = 10) -> List[Dict]:
     """Get user's recent waste disposal history."""
     query = """
-        SELECT log_id, waste_type, waste_count, points_earned, 
+        SELECT log_id, user_id, waste_type, waste_count, points_earned, 
                image_url, detected_at as timestamp
         FROM waste_logs
         WHERE user_id = %s

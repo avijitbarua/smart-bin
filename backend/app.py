@@ -420,6 +420,33 @@ def admin_bins():
         return jsonify({"error": "Failed to fetch bins"}), 500
 
 
+@app.route('/api/admin/recent-logs', methods=['GET'])
+def admin_recent_logs():
+    """Get recent waste logs from all users (Admin)."""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        
+        query = """
+            SELECT wl.log_id, wl.user_id, wl.waste_type, wl.waste_count, 
+                   wl.points_earned, wl.image_url, wl.detected_at as timestamp,
+                   u.full_name as user_name
+            FROM waste_logs wl
+            JOIN users u ON wl.user_id = u.user_id
+            ORDER BY wl.detected_at DESC
+            LIMIT %s
+        """
+        logs = db.execute_query(query, (limit,), fetch_all=True)
+        
+        return jsonify({
+            "status": "success",
+            "logs": logs
+        })
+    
+    except Exception as e:
+        print(f"Recent logs error: {e}")
+        return jsonify({"error": "Failed to fetch recent logs"}), 500
+
+
 @app.route('/api/admin/reset-bin', methods=['POST'])
 def admin_reset_bin():
     """Reset bin fill level after cleaning (Admin)."""

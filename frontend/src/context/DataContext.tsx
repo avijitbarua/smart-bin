@@ -13,17 +13,81 @@ interface DataContextValue {
   isAdmin: boolean
   refreshData: () => Promise<void>
   setCurrentUser: (user: User) => void
+  logout: () => void
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined)
 
+const SESSION_DURATION = 60 * 60 * 1000 // 1 hour in milliseconds
+const STORAGE_KEY = 'baraqa_bin_user'
+const SESSION_KEY = 'baraqa_bin_session'
+
+// Load user from localStorage if session is valid
+function loadUserFromStorage(): User | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    const session = localStorage.getItem(SESSION_KEY)
+    
+    if (!stored || !session) return null
+    
+    const loginTime = parseInt(session, 10)
+    const now = Date.now()
+    
+    // Check if session expired
+    if (now - loginTime > SESSION_DURATION) {
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(SESSION_KEY)
+      return null
+    }
+    
+    return JSON.parse(stored) as User
+  } catch {
+    return null
+  }
+}
+
+// Save user to localStorage
+function saveUserToStorage(user: User): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    localStorage.setItem(SESSION_KEY, Date.now().toString())
+  } catch {
+    console.error('Failed to save user to localStorage')
+  }
+}
+
+// Clear user from localStorage
+function clearUserFromStorage(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(SESSION_KEY)
+  } catch {
+    console.error('Failed to clear user from localStorage')
+  }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUserState] = useState<User | null>(() => loadUserFromStorage())
   const [bins, setBins] = useState<SmartBin[]>([])
   const [logs, setLogs] = useState<WasteLog[]>([])
   const [leaderboard, setLeaderboard] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Wrapper for setCurrentUser that also saves to localStorage
+  const setCurrentUser = (user: User) => {
+    setCurrentUserState(user)
+    saveUserToStorage(user)
+  }
+
+  // Logout function
+  const logout = () => {
+    setCurrentUserState(null)
+    setBins([])
+    setLogs([])
+    setLeaderboard([])
+    clearUserFromStorage()
+  }
 
   const refreshData = useCallback(async () => {
     if (!currentUser) return // Skip if user not logged in
@@ -43,7 +107,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Process user stats
       if (statsRes.status === 'fulfilled' && statsRes.value.user) {
         const userData = statsRes.value.user
-        setCurrentUser({
+        const updatedUser = {
           id: userData.user_id.toString(),
           fullName: userData.full_name,
           username: userData.username,
@@ -53,16 +117,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
           totalRecycled: userData.total_recycled_items,
           carbonSavedG: userData.carbon_saved_g,
           department: currentUser.department,
-        })
+        }
+        setCurrentUserState(updatedUser)
+        saveUserToStorage(updatedUser)
       }
 
       // Process history
       if (historyRes.status === 'fulfilled' && historyRes.value.history) {
         const historyData = historyRes.value.history.map((log) => ({
           id: log.log_id.toString(),
+          userId: log.user_id?.toString(),
           wasteType: log.waste_type,
           wasteCount: log.waste_count,
           pointsEarned: log.points_earned,
+          imageUrl: log.image_url || undefined,
           timestamp: log.timestamp,
         }))
         setLogs(historyData)
@@ -110,6 +178,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     refreshData()
   }, [refreshData])
 
+  // Auto-refresh every 30 seconds when user is logged in
+  useEffect(() => {
+    if (!currentUser) return
+
+    const interval = setInterval(() => {
+      refreshData()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [currentUser, refreshData])
+
   const value: DataContextValue = {
     currentUser,
     bins,
@@ -120,6 +199,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     isAdmin: currentUser?.role === 'admin' || false,
     refreshData,
     setCurrentUser,
+    logout,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

@@ -1,5 +1,7 @@
-import { Menu, Search, UserRound } from 'lucide-react'
+import { LogOut, Menu, Search, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar'
 import { useData } from '../context/DataContext'
 
@@ -8,7 +10,15 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { currentUser } = useData()
+  const { currentUser, logout } = useData()
+  const navigate = useNavigate()
+  const [showMenu, setShowMenu] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+    setShowMenu(false)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex">
@@ -36,8 +46,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <p className="text-sm font-semibold text-slate-900">{currentUser?.fullName || 'User'}</p>
                 <p className="text-xs text-slate-500">{currentUser?.department || 'Loading...'}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold">
-                <UserRound className="h-5 w-5" />
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold hover:bg-emerald-200 transition"
+                >
+                  <UserRound className="h-5 w-5" />
+                </button>
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-slate-200 shadow-lg overflow-hidden z-50">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-sm font-semibold text-slate-900">{currentUser?.fullName}</p>
+                      <p className="text-xs text-slate-500">{currentUser?.role === 'admin' ? '👨‍💼 Admin' : '👤 Student'}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

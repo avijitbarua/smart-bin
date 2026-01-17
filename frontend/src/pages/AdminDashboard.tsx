@@ -1,17 +1,55 @@
-import { Activity, BarChart3, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Activity, BarChart3, Eye, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BinCard } from '../components/BinCard'
 import { StatCard } from '../components/StatCard'
 import { useData } from '../context/DataContext'
-import { resetBin } from '../services/api'
+import { getAdminRecentLogs, resetBin } from '../services/api'
+
+interface AdminLog {
+  log_id: number
+  user_id: number
+  user_name: string
+  waste_type: string
+  waste_count: number
+  points_earned: number
+  image_url?: string
+  timestamp: string
+}
 
 export function AdminDashboard() {
   const { bins, leaderboard, logs, loading, error, refreshData } = useData()
+  const navigate = useNavigate()
   const [resetting, setResetting] = useState<string | null>(null)
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
 
   const totalUsage = logs.reduce((sum, log) => sum + log.wasteCount, 0)
   const activeBins = bins.filter((b) => b.status === 'active').length
   const fullBins = bins.filter((b) => b.status === 'full').length
+
+  // Fetch admin logs
+  useEffect(() => {
+    const fetchAdminLogs = async () => {
+      setLogsLoading(true)
+      try {
+        const response = await getAdminRecentLogs(20)
+        if (response.logs) {
+          setAdminLogs(response.logs)
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin logs:', err)
+      } finally {
+        setLogsLoading(false)
+      }
+    }
+
+    fetchAdminLogs()
+  }, [])
+
+  const handleViewUserHistory = (userId: number) => {
+    navigate(`/admin/user/${userId}/history`)
+  }
 
   const handleResetBin = async (binId: string) => {
     if (!confirm('Are you sure you want to reset this bin? This will set fill level to 0.')) {
@@ -114,35 +152,58 @@ export function AdminDashboard() {
 
       <div className="rounded-2xl border border-slate-100 bg-white/90 shadow-card p-4">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent System Activity</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3 text-left">Timestamp</th>
-                <th className="px-4 py-3 text-left">Waste Type</th>
-                <th className="px-4 py-3 text-left">Count</th>
-                <th className="px-4 py-3 text-left">Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.slice(0, 10).map((log) => (
-                <tr key={log.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 text-slate-500">
-                    {new Date(log.timestamp).toLocaleString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{log.wasteType}</td>
-                  <td className="px-4 py-3 text-slate-600">{log.wasteCount}</td>
-                  <td className="px-4 py-3 text-emerald-700 font-semibold">{log.pointsEarned}</td>
+        {logsLoading ? (
+          <div className="text-center py-8 text-slate-500">Loading...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left">User</th>
+                  <th className="px-4 py-3 text-left">Timestamp</th>
+                  <th className="px-4 py-3 text-left">Waste Type</th>
+                  <th className="px-4 py-3 text-left">Count</th>
+                  <th className="px-4 py-3 text-left">Points</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {adminLogs.map((log) => (
+                  <tr key={log.log_id} className="border-t border-slate-100 hover:bg-slate-50/50 transition">
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleViewUserHistory(log.user_id)}
+                        className="font-medium text-slate-900 hover:text-emerald-600 underline-offset-2 hover:underline"
+                      >
+                        {log.user_name}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {new Date(log.timestamp).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{log.waste_type}</td>
+                    <td className="px-4 py-3 text-slate-600">{log.waste_count}</td>
+                    <td className="px-4 py-3 text-emerald-700 font-semibold">{log.points_earned}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleViewUserHistory(log.user_id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition text-xs font-medium"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
