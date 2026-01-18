@@ -1,4 +1,4 @@
-import { Calendar, ExternalLink, Image as ImageIcon, Package } from 'lucide-react'
+import { Calendar, ExternalLink, Image as  Package } from 'lucide-react'
 import { useData } from '../context/DataContext'
 
 export function History() {

@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, ExternalLink, Image as ImageIcon, Package } from 'lucide-react'
+import { ArrowLeft, Calendar, ExternalLink, Image as Package } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getUserHistory, getUserStats } from '../services/api'
